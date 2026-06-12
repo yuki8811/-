@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>契約・助成金タイムライン — CivilCollege</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+:root{
+  --bg:#f5f4f0;--surface:#fff;--surface2:#f0ede8;--border:#e0dbd4;
+  --ink:#1a1814;--ink2:#4a4540;--muted:#8a8480;
+  --accent:#c8440a;--accent2:#e8650a;
+  --blue:#1a5fa0;--green:#1a7a40;--amber:#c87800;--red:#c82020;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:'Noto Sans JP',sans-serif;font-size:12px;min-height:100vh}
+
+/* ── UPLOAD ── */
+#upload-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px;gap:28px}
+.logo-brand{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--accent);font-family:'IBM Plex Mono',monospace;margin-bottom:8px}
+.logo-title{font-size:28px;font-weight:700;letter-spacing:-1px}
+.logo-title span{color:var(--accent)}
+.drop-zone{width:100%;max-width:500px;border:2px dashed var(--border);border-radius:12px;padding:52px 40px;text-align:center;cursor:pointer;background:var(--surface);position:relative;transition:all .2s}
+.drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:#fdf5f0}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{font-size:44px;display:block;margin-bottom:12px}
+.drop-label{font-size:15px;color:var(--ink2);margin-bottom:6px;font-weight:500}
+.drop-sub{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+.hint-box{max-width:500px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px}
+.hint-box h3{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-family:'IBM Plex Mono',monospace}
+.hint-tags{display:flex;flex-wrap:wrap;gap:5px}
+.hint-tag{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink2)}
+#prog-wrap{display:none;width:100%;max-width:500px;text-align:center}
+.prog-bar{background:var(--surface);border-radius:4px;height:5px;overflow:hidden;margin-bottom:8px}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .3s;border-radius:4px}
+#prog-msg{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+
+/* ── MAIN ── */
+#main{display:none;flex-direction:column;min-height:100vh}
+.top-header{background:var(--ink);color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.th-title{font-size:15px;font-weight:700;color:#f0a500}
+.th-meta{font-size:11px;color:rgba(255,255,255,.45);font-family:'IBM Plex Mono',monospace}
+.btn-reload{background:transparent;border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.6);border-radius:5px;padding:5px 12px;cursor:pointer;font-size:11px;font-family:'Noto Sans JP',sans-serif;transition:all .15s}
+.btn-reload:hover{border-color:var(--accent2);color:var(--accent2)}
+
+/* ── TABS ── */
+.main-tabs{display:flex;background:var(--surface2);border-bottom:1px solid var(--border)}
+.main-tab{background:transparent;border:none;border-bottom:3px solid transparent;color:var(--muted);padding:10px 22px;cursor:pointer;font-size:13px;font-family:'Noto Sans JP',sans-serif;transition:all .15s;margin-bottom:-1px}
+.main-tab:hover{color:var(--ink2)}
+.main-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+
+/* ── FILTERS ── */
+.filter-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.filter-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+.fsel{background:var(--surface2);border:1px solid var(--border);color:var(--ink);border-radius:5px;padding:5px 8px;font-size:11px;font-family:'Noto Sans JP',sans-serif;outline:none}
+.fsel:focus{border-color:var(--accent)}
+
+/* ── PHASE TABS ── */
+.phase-tabs{display:flex;gap:8px;padding:10px 24px;background:var(--bg);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.phase-btn{border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:20px;padding:4px 14px;cursor:pointer;font-size:11px;font-family:'Noto Sans JP',sans-serif;transition:all .15s}
+.phase-btn:hover{border-color:var(--accent);color:var(--accent)}
+.phase-btn.active{color:#fff;border-color:transparent;font-weight:700}
+.phase-btn.all.active{background:var(--ink)}
+.phase-btn.red.active{background:var(--red)}
+.phase-btn.amber.active{background:var(--amber)}
+.phase-btn.blue.active{background:var(--blue)}
+.phase-btn.gray.active{background:var(--muted)}
+.phase-count{font-size:10px;font-family:'IBM Plex Mono',monospace;margin-left:4px;opacity:.8}
+
+/* ── GANTT ── */
+.gantt-wrap{padding:16px 24px;overflow-x:auto;flex:1}
+.gantt-table{width:100%;border-collapse:collapse;min-width:900px}
+.th-name{position:sticky;left:0;z-index:11;background:var(--surface2);text-align:left;padding:7px 10px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:'IBM Plex Mono',monospace;border-bottom:2px solid var(--border)}
+.th-info{background:var(--surface2);text-align:center;padding:7px 4px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:'IBM Plex Mono',monospace;border-bottom:2px solid var(--border);white-space:nowrap}
+.th-bar{background:var(--surface2);padding:7px 8px;border-bottom:2px solid var(--border)}
+.col-name{position:sticky;left:0;z-index:10;background:var(--surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;font-size:11px;padding:6px 10px;border-bottom:1px solid var(--border);max-width:160px}
+.col-info{text-align:center;font-size:11px;font-family:'IBM Plex Mono',monospace;padding:6px 4px;border-bottom:1px solid var(--border);white-space:nowrap}
+.col-bar{padding:6px 8px;border-bottom:1px solid var(--border);min-width:500px}
+tr.phase-red .col-name{border-left:3px solid var(--red)}
+tr.phase-amber .col-name{border-left:3px solid var(--amber)}
+tr.phase-blue .col-name{border-left:3px solid var(--blue)}
+tr.phase-gray .col-name{border-left:3px solid var(--muted)}
+.gantt-table tbody tr:hover td{background:#fdf8f5 !important}
+.month-ruler{display:flex;height:18px;margin-bottom:2px}
+.month-cell{flex-shrink:0;font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--muted);text-align:center;border-left:1px solid var(--border);padding-top:2px}
+.month-cell.current{color:var(--accent);font-weight:700}
+.seg{position:absolute;top:4px;height:16px;border-radius:3px}
+.seg.active-period{background:linear-gradient(90deg,#bfdbfe,#93c5fd);border:1px solid #60a5fa}
+.seg.check-zone{background:rgba(200,120,0,.2);border:1px solid rgba(200,120,0,.4)}
+.seg.approach-zone{background:rgba(200,32,32,.2);border:1px solid rgba(200,32,32,.4)}
+.seg.past{background:rgba(100,100,100,.1);border:1px dashed #ccc}
+.pin{position:absolute;top:0;width:2px;height:24px;z-index:5}
+.pin-label{position:absolute;top:-14px;font-size:8px;font-family:'IBM Plex Mono',monospace;white-space:nowrap;transform:translateX(-50%)}
+.pin.start-pin{background:var(--blue)}
+.pin.check-pin{background:var(--amber)}
+.pin.approach-pin{background:#e05000}
+.pin.renew-pin{background:var(--red);width:3px}
+.pin.today-pin{background:var(--accent);width:2px;opacity:.8}
+.pct-badge{display:inline-block;padding:1px 5px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700}
+.pct-hi{background:#e8f5ec;color:var(--green)}.pct-mid{background:#fef3c7;color:var(--amber)}.pct-lo{background:#fee2e2;color:var(--red)}
+.contact-badge{font-size:10px;padding:1px 5px;border-radius:3px;font-family:'IBM Plex Mono',monospace}
+.cb-ok{background:#e8f5ec;color:var(--green)}.cb-mid{background:#fef3c7;color:var(--amber)}.cb-ng{background:#fee2e2;color:var(--red)}.cb-un{background:#f3f4f6;color:var(--muted)}
+.days-badge{font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:700}
+.days-red{color:var(--red)}.days-amber{color:var(--amber)}.days-blue{color:var(--blue)}.days-gray{color:var(--muted)}
+.alert-banner{background:#fee2e2;border:1px solid rgba(200,32,32,.3);border-radius:6px;padding:10px 16px;margin-bottom:12px;font-size:12px;color:var(--red)}
+
+/* ── ACTION PLAN ── */
+#tab-plan{display:none}
+.plan-wrap{padding:20px 24px}
+.plan-month-block{margin-bottom:28px}
+.plan-month-head{display:flex;align-items:center;gap:14px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--ink)}
+.plan-month-title{font-size:18px;font-weight:700;color:var(--ink)}
+.plan-month-sub{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+.plan-actions-grid{display:flex;flex-direction:column;gap:6px}
+.action-row{display:grid;grid-template-columns:200px 140px 1fr 80px 80px;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 14px;transition:background .1s}
+.action-row:hover{background:var(--surface2)}
+.action-row.urgent{border-left:3px solid var(--red)}
+.action-row.check{border-left:3px solid var(--amber)}
+.action-row.approach{border-left:3px solid #e05000}
+.action-row.renew{border-left:3px solid var(--red)}
+.action-row.followup{border-left:3px solid var(--blue)}
+.action-company{font-weight:700;font-size:11px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.action-type-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap;text-align:center}
+.at-renew{background:#fee2e2;color:var(--red)}
+.at-approach{background:#fde8e0;color:var(--accent)}
+.at-check{background:#fef3c7;color:var(--amber)}
+.at-followup{background:#e8f0ff;color:var(--blue)}
+.at-onboard{background:#e8f5ec;color:var(--green)}
+.action-note{font-size:11px;color:var(--ink2)}
+.action-pct{text-align:center}
+.action-staff{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-align:center}
+.no-actions{font-size:12px;color:var(--muted);padding:12px;text-align:center}
+.plan-month-kpi{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.plan-kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 14px;display:flex;align-items:center;gap:8px}
+.plan-kpi-val{font-size:18px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--ink)}
+.plan-kpi-lbl{font-size:10px;color:var(--muted)}
+.print-btn{background:var(--surface);border:1px solid var(--border);color:var(--ink2);border-radius:5px;padding:5px 12px;cursor:pointer;font-size:11px;font-family:'Noto Sans JP',sans-serif;transition:all .15s}
+.print-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media print{.top-header,.main-tabs,.filter-bar,.phase-tabs{display:none!important}.plan-wrap{padding:0}}
+</style>
+</head>
+<body>
+
+<!-- ── UPLOAD ── -->
+<div id="upload-screen">
+  <div style="text-align:center">
+    <div class="logo-brand">CivilCollege CS</div>
+    <div class="logo-title">契約・助成金<span>タイムライン</span></div>
+  </div>
+  <div class="drop-zone" id="drop-zone">
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv">
+    <span class="drop-icon">📋</span>
+    <div class="drop-label">全社管理Excelをドロップ / クリックして選択</div>
+    <div class="drop-sub">CS全社管理表_修正版.xlsx など</div>
+  </div>
+  <div id="prog-wrap">
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+    <div id="prog-msg">読み込み中...</div>
+  </div>
+  <div class="hint-box">
+    <h3>必要な列（自動認識）</h3>
+    <div class="hint-tags">
+      <span class="hint-tag">会社名</span>
+      <span class="hint-tag">契約開始日</span>
+      <span class="hint-tag">次回更新日</span>
+      <span class="hint-tag">完了率(%)</span>
+      <span class="hint-tag">学習件数</span>
+      <span class="hint-tag">接触</span>
+      <span class="hint-tag">対応（担当者）</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div id="main">
+  <div class="top-header">
+    <div>
+      <div class="th-title">📅 契約・助成金タイムライン</div>
+      <div class="th-meta" id="file-meta">—</div>
+    </div>
+    <button class="btn-reload" onclick="reloadFile()">🔄 別ファイル</button>
+  </div>
+
+  <div class="main-tabs">
+    <button class="main-tab active" id="tab-gantt-btn" onclick="switchMainTab('gantt')">📊 ガントチャート</button>
+    <button class="main-tab" id="tab-plan-btn" onclick="switchMainTab('plan')">📋 月別行動計画</button>
+  </div>
+
+  <!-- GANTT TAB -->
+  <div id="tab-gantt">
+    <div class="filter-bar">
+      <span class="filter-label">絞り込み</span>
+      <select class="fsel" id="f-staff" onchange="renderGantt()">
+        <option value="">担当 — 全て</option>
+      </select>
+      <select class="fsel" id="f-contact" onchange="renderGantt()">
+        <option value="">接触 — 全て</option>
+        <option>個人</option><option>全体</option><option>個人/会社</option>
+        <option>△</option><option>×代表のみ</option><option>×</option><option>未</option>
+      </select>
+    </div>
+    <div class="phase-tabs" id="phase-tabs"></div>
+    <div class="gantt-wrap">
+      <div id="alert-area"></div>
+      <table class="gantt-table">
+        <thead id="gantt-head"></thead>
+        <tbody id="gantt-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PLAN TAB -->
+  <div id="tab-plan">
+    <div class="filter-bar">
+      <span class="filter-label">担当</span>
+      <select class="fsel" id="fp-staff" onchange="renderPlan()">
+        <option value="">全担当</option>
+      </select>
+      <span class="filter-label" style="margin-left:8px">表示月数</span>
+      <select class="fsel" id="fp-months" onchange="renderPlan()">
+        <option value="6">今後6ヶ月</option>
+        <option value="12" selected>今後12ヶ月</option>
+        <option value="18">今後18ヶ月</option>
+      </select>
+      <button class="print-btn" onclick="window.print()">🖨️ 印刷／PDF</button>
+      <button class="print-btn" style="background:rgba(26,95,160,.1);border-color:rgba(26,95,160,.4);color:var(--blue)" onclick="exportWord()">📄 Word出力</button>
+    </div>
+    <div class="plan-wrap" id="plan-wrap"></div>
+  </div>
+</div>
+
+<script>
+const TODAY = new Date();
+// 今日の日付を動的に使用
+const TODAY_STR = TODAY.toISOString().slice(0,10);
+
+let DATA = [];
+
+// ── Upload ──
+const dz = document.getElementById('drop-zone');
+const fi = document.getElementById('file-input');
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('over')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0])});
+fi.addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0])});
+
+function reloadFile(){
+  document.getElementById('main').style.display='none';
+  document.getElementById('upload-screen').style.display='flex';
+  DATA=[];fi.value='';
+}
+
+function setP(pct,msg){
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-msg').textContent=msg;
+}
+
+async function loadFile(file){
+  document.getElementById('prog-wrap').style.display='block';
+  setP(10,'ファイル読み込み中...');
+  try{
+    const buf=await file.arrayBuffer();
+    setP(40,'Excel解析中...');
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+    setP(70,'データ変換中...');
+
+    const col=(row,keys)=>{
+      for(const k of keys){
+        const f=Object.keys(row).find(c=>String(c).includes(k));
+        if(f!==undefined){const v=row[f];return v===null||v===undefined?'':String(v).trim().replace(/^nan$/i,'')}
+      }
+      return '';
+    };
+    const toD=(row,keys)=>{
+      for(const k of keys){
+        const f=Object.keys(row).find(c=>String(c).includes(k));
+        if(f!==undefined){
+          const v=row[f];
+          if(!v||v==='')return null;
+          if(v instanceof Date&&!isNaN(v))return v;
+          const d=new Date(String(v));
+          return isNaN(d)?null:d;
+        }
+      }
+      return null;
+    };
+    const toN=(row,keys)=>{
+      const s=col(row,keys);
+      const n=parseFloat(s.replace('%',''));
+      return isNaN(n)?0:n;
+    };
+
+    DATA=rows.filter(row=>{
+      const n=col(row,['会社名','company']);
+      return n&&n!=='合計'&&n.trim()!=='';
+    }).map(row=>{
+      const name=col(row,['会社名','company']);
+      let start=toD(row,['契約開始日','開始日','契約日']);
+      let renew=toD(row,['次回更新日','更新日','次回更新']);
+      if(!start)return null;
+      if(!renew)renew=new Date(start.getFullYear()+1,start.getMonth(),start.getDate());
+
+      const check6m=new Date(renew);check6m.setMonth(check6m.getMonth()-6);
+      const approach4m=new Date(renew);approach4m.setMonth(renew.getMonth()-4);
+      const approach3m=new Date(renew);approach3m.setMonth(renew.getMonth()-3);
+      const daysToRenew=Math.round((renew-TODAY)/86400000);
+
+      let phase='blue';
+      if(daysToRenew<0)phase='gray';
+      else if(daysToRenew<=90)phase='red';
+      else if(daysToRenew<=180)phase='amber';
+
+      const pct=toN(row,['完了率']);
+      const contact=col(row,['接触']);
+      const staff=col(row,['対応','担当']);
+
+      return{name,pct,count:toN(row,['学習件数']),contact,staff,
+        start,renew,check6m,approach4m,approach3m,daysToRenew,phase,
+        startStr:fmtD(start),renewStr:fmtD(renew),
+        check6mStr:fmtD(check6m),approach4mStr:fmtD(approach4m),approach3mStr:fmtD(approach3m)
+      };
+    }).filter(Boolean);
+
+    DATA.sort((a,b)=>a.daysToRenew-b.daysToRenew);
+
+    // populate staff filter
+    const staffs=[...new Set(DATA.map(r=>r.staff).filter(Boolean))].sort();
+    ['f-staff','fp-staff'].forEach(id=>{
+      const sel=document.getElementById(id);
+      const base=id==='f-staff'?'担当 — 全て':'全担当';
+      sel.innerHTML=`<option value="">${base}</option>`+staffs.map(s=>`<option>${s}</option>`).join('');
+    });
+
+    setP(90,'描画中...');
+    document.getElementById('file-meta').textContent=
+      `${file.name}　${DATA.length}社　${TODAY.toLocaleDateString('ja-JP')}現在`;
+
+    buildPhaseTabs();
+    renderGantt();
+    renderPlan();
+    setP(100,'完了');
+    setTimeout(()=>{
+      document.getElementById('upload-screen').style.display='none';
+      document.getElementById('main').style.display='flex';
+    },300);
+  }catch(e){setP(0,'❌ エラー: '+e.message);console.error(e)}
+}
+
+// ── Helpers ──
+function fmtD(d){if(!d||isNaN(d))return '';return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function fmtDShort(d){if(!d||isNaN(d))return '';return (d.getMonth()+1)+'/'+d.getDate()}
+function fmtYM(d){return d.getFullYear()+'年'+(d.getMonth()+1)+'月'}
+
+function pctBadge(p){const c=p>=80?'pct-hi':p>=60?'pct-mid':'pct-lo';return `<span class="pct-badge ${c}">${p}%</span>`}
+function contactBadge(c){const m={個人:'cb-ok',全体:'cb-ok','個人/会社':'cb-ok','△':'cb-mid','×代表のみ':'cb-mid','×':'cb-ng','未':'cb-un'};return `<span class="contact-badge ${m[c]||'cb-un'}">${c||'—'}</span>`}
+function daysBadge(d){
+  if(d<0)return `<span class="days-badge days-gray">更新済</span>`;
+  if(d<=90)return `<span class="days-badge days-red">残${d}日</span>`;
+  if(d<=180)return `<span class="days-badge days-amber">残${d}日</span>`;
+  return `<span class="days-badge days-blue">残${d}日</span>`;
+}
+
+// ── Main tab switch ──
+function switchMainTab(tab){
+  ['gantt','plan'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('tab-'+t+'-btn').classList.toggle('active',t===tab);
+  });
+}
+
+// ── Gantt ──
+let currentPhase='all';
+const PHASES=[
+  {key:'all',label:'全社',color:'all'},
+  {key:'red',label:'🔴 更新打診中',color:'red'},
+  {key:'amber',label:'🟡 助成金チェック',color:'amber'},
+  {key:'blue',label:'🔵 利用促進期',color:'blue'},
+  {key:'gray',label:'⚫ 更新済',color:'gray'},
+];
+
+function buildPhaseTabs(){
+  const counts={all:DATA.length};
+  DATA.forEach(r=>{counts[r.phase]=(counts[r.phase]||0)+1});
+  document.getElementById('phase-tabs').innerHTML=PHASES.map(p=>
+    `<button class="phase-btn ${p.color}${currentPhase===p.key?' active':''}" onclick="setPhase('${p.key}')">
+      ${p.label}<span class="phase-count">${counts[p.key]||0}</span>
+    </button>`
+  ).join('');
+}
+
+function setPhase(p){currentPhase=p;buildPhaseTabs();renderGantt()}
+
+// gantt view window: today-90days to today+400days
+function getViewWindow(){
+  const vs=new Date(TODAY);vs.setDate(vs.getDate()-90);vs.setDate(1);
+  const ve=new Date(TODAY);ve.setDate(ve.getDate()+400);ve.setDate(1);
+  return{vs,ve,totalMs:ve-vs};
+}
+
+function datePct(d,vs,totalMs){
+  const ms=new Date(d)-vs;
+  return Math.min(100,Math.max(0,(ms/totalMs)*100));
+}
+
+function buildRuler(vs,ve,totalMs){
+  let html='<div class="month-ruler">';
+  const d=new Date(vs);
+  while(d<ve){
+    const next=new Date(d.getFullYear(),d.getMonth()+1,1);
+    const w=Math.min(100,(Math.min(next,ve)-d)/totalMs*100);
+    const isCur=d.getFullYear()===TODAY.getFullYear()&&d.getMonth()===TODAY.getMonth();
+    const lbl=`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}`;
+    html+=`<div class="month-cell${isCur?' current':''}" style="width:${w.toFixed(2)}%">${lbl}</div>`;
+    d.setMonth(d.getMonth()+1);
+  }
+  return html+'</div>';
+}
+
+function buildBarHtml(r,vs,totalMs){
+  const sp=datePct(r.start,vs,totalMs);
+  const rp=datePct(r.renew,vs,totalMs);
+  const cp=datePct(r.check6m,vs,totalMs);
+  const ap=datePct(r.approach4m,vs,totalMs);
+  const tp=datePct(TODAY,vs,totalMs);
+  const isPast=r.daysToRenew<0;
+
+  let h=`<div style="position:relative;height:24px">`;
+  if(rp>sp)h+=`<div class="seg ${isPast?'past':'active-period'}" style="left:${sp.toFixed(2)}%;width:${(rp-sp).toFixed(2)}%"></div>`;
+  if(!isPast&&cp<rp&&cp<100)h+=`<div class="seg check-zone" style="left:${cp.toFixed(2)}%;width:${(Math.min(ap,rp,100)-cp).toFixed(2)}%"></div>`;
+  if(!isPast&&ap<rp&&ap<100)h+=`<div class="seg approach-zone" style="left:${ap.toFixed(2)}%;width:${(Math.min(rp,100)-ap).toFixed(2)}%"></div>`;
+  if(sp>=0&&sp<=100)h+=`<div class="pin start-pin" style="left:${sp.toFixed(2)}%"><div class="pin-label" style="color:var(--blue)">開始</div></div>`;
+  if(cp>=0&&cp<=100)h+=`<div class="pin check-pin" style="left:${cp.toFixed(2)}%"><div class="pin-label" style="color:var(--amber)">${fmtDShort(r.check6m)}</div></div>`;
+  if(ap>=0&&ap<=100)h+=`<div class="pin approach-pin" style="left:${ap.toFixed(2)}%"><div class="pin-label" style="color:#e05000">${fmtDShort(r.approach4m)}</div></div>`;
+  if(rp>=0&&rp<=100)h+=`<div class="pin renew-pin" style="left:${rp.toFixed(2)}%"><div class="pin-label" style="color:var(--red)">${fmtDShort(r.renew)}</div></div>`;
+  if(tp>=0&&tp<=100)h+=`<div class="pin today-pin" style="left:${tp.toFixed(2)}%"></div>`;
+  return h+'</div>';
+}
+
+function renderGantt(){
+  const staff=document.getElementById('f-staff').value;
+  const contact=document.getElementById('f-contact').value;
+  const filtered=DATA.filter(r=>{
+    if(currentPhase!=='all'&&r.phase!==currentPhase)return false;
+    if(staff&&!r.staff.includes(staff))return false;
+    if(contact&&r.contact!==contact)return false;
+    return true;
+  });
+
+  const urgent=DATA.filter(r=>r.daysToRenew>=0&&r.daysToRenew<=30&&r.count===0);
+  document.getElementById('alert-area').innerHTML=urgent.length>0
+    ?`<div class="alert-banner">⚠️ <strong>更新30日以内で学習件数ゼロ:</strong> ${urgent.map(r=>r.name).join('、')}</div>`:'';
+
+  const{vs,ve,totalMs}=getViewWindow();
+  document.getElementById('gantt-head').innerHTML=`<tr>
+    <th class="th-name">会社名</th>
+    <th class="th-info">完了率</th>
+    <th class="th-info">接触</th>
+    <th class="th-info">更新まで</th>
+    <th class="th-bar">${buildRuler(vs,ve,totalMs)}</th>
+  </tr>`;
+
+  document.getElementById('gantt-body').innerHTML=filtered.map(r=>`
+    <tr class="phase-${r.phase}">
+      <td class="col-name" title="${r.name}">${r.name}</td>
+      <td class="col-info">${pctBadge(r.pct)}</td>
+      <td class="col-info">${contactBadge(r.contact)}</td>
+      <td class="col-info">${daysBadge(r.daysToRenew)}</td>
+      <td class="col-bar">${buildBarHtml(r,vs,totalMs)}</td>
+    </tr>`).join('');
+}
+
+// ── Action Plan ──
+function renderPlan(){
+  const staffFilter=document.getElementById('fp-staff').value;
+  const months=parseInt(document.getElementById('fp-months').value)||12;
+
+  // 各社に対して月別イベントを生成
+  const events=[];
+  DATA.forEach(r=>{
+    if(staffFilter&&!r.staff.includes(staffFilter))return;
+
+    // 更新日
+    addEvent(events,r.renew,r,'renew','更新日','更新手続き・次期契約締結・次回計画届の提出タイミング',3);
+    // 更新打診（4ヶ月前）
+    addEvent(events,r.approach4m,r,'approach','更新打診（4ヶ月前）','更新意向の確認・利用状況レポート持参・次期プラン提案',2);
+    // 更新打診（3ヶ月前）
+    addEvent(events,r.approach3m,r,'approach2','更新打診（3ヶ月前）','助成金支給申請の進捗確認・更新の最終確認',2);
+    // 助成金チェック（6ヶ月前）
+    addEvent(events,r.check6m,r,'check','助成金チェック（6ヶ月前）','利用率確認・支給申請可能か検討・計画届の話も',1);
+    // 利用開始後3ヶ月チェック
+    const threeM=new Date(r.start);threeM.setMonth(threeM.getMonth()+3);
+    addEvent(events,threeM,r,'followup','利用3ヶ月チェック','学習進捗の確認・困っていることのヒアリング',1);
+  });
+
+  // 今日以降〜N月後までに絞る
+  const endDate=new Date(TODAY);endDate.setMonth(endDate.getMonth()+months);
+  const filtered=events.filter(e=>e.date>=TODAY&&e.date<=endDate);
+
+  // 月ごとにグループ化
+  const byMonth={};
+  filtered.forEach(e=>{
+    const key=e.date.getFullYear()+'-'+String(e.date.getMonth()+1).padStart(2,'0');
+    if(!byMonth[key])byMonth[key]=[];
+    byMonth[key].push(e);
+  });
+
+  const monthKeys=Object.keys(byMonth).sort();
+  if(monthKeys.length===0){
+    document.getElementById('plan-wrap').innerHTML='<div style="color:var(--muted);text-align:center;padding:60px;font-size:13px">対象期間内のアクションがありません</div>';
+    return;
+  }
+
+  let html='';
+  monthKeys.forEach(mk=>{
+    const evs=byMonth[mk].sort((a,b)=>a.priority-b.priority||a.date-b.date);
+    const [y,m]=mk.split('-');
+    const dt=new Date(parseInt(y),parseInt(m)-1,1);
+    const isCurrentMonth=dt.getFullYear()===TODAY.getFullYear()&&dt.getMonth()===TODAY.getMonth();
+
+    // KPIs for this month
+    const renewCount=evs.filter(e=>e.type==='renew').length;
+    const approachCount=evs.filter(e=>e.type.startsWith('approach')).length;
+    const checkCount=evs.filter(e=>e.type==='check').length;
+
+    html+=`<div class="plan-month-block">
+      <div class="plan-month-head">
+        <div class="plan-month-title">${y}年${m}月${isCurrentMonth?' 🔴 今月':''}</div>
+        <div class="plan-month-sub">${evs.length}件のアクション</div>
+      </div>
+      <div class="plan-month-kpi">
+        ${renewCount>0?`<div class="plan-kpi-card"><div class="plan-kpi-val" style="color:var(--red)">${renewCount}</div><div class="plan-kpi-lbl">更新</div></div>`:''}
+        ${approachCount>0?`<div class="plan-kpi-card"><div class="plan-kpi-val" style="color:var(--accent)">${approachCount}</div><div class="plan-kpi-lbl">更新打診</div></div>`:''}
+        ${checkCount>0?`<div class="plan-kpi-card"><div class="plan-kpi-val" style="color:var(--amber)">${checkCount}</div><div class="plan-kpi-lbl">助成金チェック</div></div>`:''}
+      </div>
+      <div class="plan-actions-grid">
+        ${evs.map(e=>{
+          const typeCls={renew:'at-renew',approach:'at-approach',approach2:'at-approach',check:'at-check',followup:'at-followup',onboard:'at-onboard'}[e.type]||'at-followup';
+          const rowCls={renew:'renew',approach:'approach',approach2:'approach',check:'check',followup:'followup'}[e.type]||'followup';
+          const typeLbl={renew:'更新日',approach:'更新打診 4M',approach2:'更新打診 3M',check:'助成金チェック 6M',followup:'3ヶ月チェック'}[e.type]||e.type;
+          return `<div class="action-row ${rowCls}">
+            <div class="action-company" title="${e.r.name}">${e.r.name}</div>
+            <div><span class="action-type-badge ${typeCls}">${typeLbl}</span></div>
+            <div class="action-note">${e.note}${e.r.pct>0?` (現在${e.r.pct}%完了)`:''}</div>
+            <div class="action-pct">${pctBadge(e.r.pct)}</div>
+            <div class="action-staff">${e.r.staff||'—'}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('plan-wrap').innerHTML=html;
+}
+
+function addEvent(events,date,r,type,label,priority){
+  if(!date||isNaN(date))return;
+  // 月の最初の日に正規化（月で表示するため）
+  const d=new Date(date.getFullYear(),date.getMonth(),1);
+  events.push({date:d,exactDate:date,r,type,label,note:label,priority});
+}
+
+// ── Word出力 ──
+function exportWord(){
+  const staffFilter=document.getElementById('fp-staff').value;
+  const months=parseInt(document.getElementById('fp-months').value)||12;
+
+  // 現在表示中と同じデータを収集
+  const events=[];
+  DATA.forEach(r=>{
+    if(staffFilter&&!r.staff.includes(staffFilter))return;
+    addEvent(events,r.renew,r,'renew','更新日','更新手続き・次期契約締結・次回計画届の提出タイミング',3);
+    addEvent(events,r.approach4m,r,'approach','更新打診（4ヶ月前）','更新意向の確認・利用状況レポート持参・次期プラン提案',2);
+    addEvent(events,r.approach3m,r,'approach2','更新打診（3ヶ月前）','助成金支給申請の進捗確認・更新の最終確認',2);
+    addEvent(events,r.check6m,r,'check','助成金チェック（6ヶ月前）','利用率確認・支給申請可能か検討・計画届の話も',1);
+    const threeM=new Date(r.start);threeM.setMonth(threeM.getMonth()+3);
+    addEvent(events,threeM,r,'followup','利用3ヶ月チェック','学習進捗の確認・困っていることのヒアリング',1);
+  });
+
+  const endDate=new Date(TODAY);endDate.setMonth(endDate.getMonth()+months);
+  const filtered=events.filter(e=>e.date>=TODAY&&e.date<=endDate);
+  const byMonth={};
+  filtered.forEach(e=>{
+    const key=e.date.getFullYear()+'-'+String(e.date.getMonth()+1).padStart(2,'0');
+    if(!byMonth[key])byMonth[key]=[];
+    byMonth[key].push(e);
+  });
+  const monthKeys=Object.keys(byMonth).sort();
+
+  // ── HTMLをWordで読み込める形式（.doc）で出力 ──
+  const typeLblMap={renew:'更新日',approach:'更新打診 4M前',approach2:'更新打診 3M前',check:'助成金チェック 6M前',followup:'3ヶ月チェック'};
+  const typeColorMap={renew:'#C82020',approach:'#C8440A',approach2:'#C8440A',check:'#C87800',followup:'#1A5FA0'};
+
+  let html=`
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<style>
+  body{font-family:'ＭＳ 明朝','MS Mincho','Noto Sans JP',sans-serif;font-size:10pt;color:#1a1814;margin:2cm}
+  h1{font-size:18pt;font-weight:bold;color:#1a1814;border-bottom:3pt solid #C8440A;padding-bottom:4pt;margin-top:0;margin-bottom:8pt}
+  h2{font-size:14pt;font-weight:bold;color:#1a1814;border-bottom:1pt solid #1a1814;padding-bottom:3pt;margin-top:16pt;margin-bottom:6pt}
+  .kpi-row{display:flex;gap:12pt;margin-bottom:8pt}
+  .kpi{border:1pt solid #e0dbd4;border-radius:4pt;padding:4pt 10pt;font-size:10pt}
+  table{width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:8pt}
+  th{background:#2a2520;color:#f0a500;padding:5pt 8pt;text-align:left;font-weight:bold;font-size:9pt}
+  td{padding:5pt 8pt;border-bottom:1pt solid #e0dbd4;vertical-align:middle}
+  tr:nth-child(even) td{background:#faf8f5}
+  .badge{padding:1pt 5pt;border-radius:3pt;font-size:8.5pt;font-weight:bold}
+  .meta{font-size:9pt;color:#8a8480;margin-bottom:16pt}
+  @page{margin:2cm;size:A4}
+</style>
+</head>
+<body>
+<h1>📅 月別CS行動計画</h1>
+<div class="meta">作成日: ${TODAY.toLocaleDateString('ja-JP')}　担当: ${staffFilter||'全員'}　対象: 今後${months}ヶ月</div>
+`;
+
+  monthKeys.forEach(mk=>{
+    const evs=byMonth[mk].sort((a,b)=>a.priority-b.priority||a.date-b.date);
+    const [y,m]=mk.split('-');
+    const renewCount=evs.filter(e=>e.type==='renew').length;
+    const approachCount=evs.filter(e=>e.type.startsWith('approach')).length;
+    const checkCount=evs.filter(e=>e.type==='check').length;
+
+    html+=`<h2>${y}年${m}月　<span style="font-size:10pt;color:#8a8480;font-weight:normal">${evs.length}件のアクション</span></h2>`;
+
+    // KPI行
+    html+='<p style="margin-bottom:8pt">';
+    if(renewCount>0) html+=`<span class="badge" style="background:#fee2e2;color:#C82020;margin-right:6pt">更新 ${renewCount}社</span>`;
+    if(approachCount>0) html+=`<span class="badge" style="background:#fde8e0;color:#C8440A;margin-right:6pt">更新打診 ${approachCount}社</span>`;
+    if(checkCount>0) html+=`<span class="badge" style="background:#fef3c7;color:#C87800;margin-right:6pt">助成金チェック ${checkCount}社</span>`;
+    html+='</p>';
+
+    html+=`<table>
+<thead><tr>
+  <th style="width:22%">会社名</th>
+  <th style="width:18%">アクション種別</th>
+  <th style="width:40%">実施内容</th>
+  <th style="width:10%">完了率</th>
+  <th style="width:10%">担当</th>
+</tr></thead>
+<tbody>`;
+
+    evs.forEach(e=>{
+      const lbl=typeLblMap[e.type]||e.type;
+      const col=typeColorMap[e.type]||'#1A5FA0';
+      const pctColor=e.r.pct>=80?'#1A7A40':e.r.pct>=60?'#C87800':'#C82020';
+      html+=`<tr>
+        <td><strong>${e.r.name}</strong></td>
+        <td><span class="badge" style="background:${col}22;color:${col};border:1pt solid ${col}66">${lbl}</span></td>
+        <td>${e.note}${e.r.pct>0?` （現在${e.r.pct}%完了）`:''}</td>
+        <td style="text-align:center;font-weight:bold;color:${pctColor}">${e.r.pct}%</td>
+        <td style="text-align:center;color:#8a8480">${e.r.staff||'—'}</td>
+      </tr>`;
+    });
+
+    html+=`</tbody></table>`;
+  });
+
+  html+=`</body></html>`;
+
+  // .docとして出力（WordがHTMLを読み込む形式）
+  const blob=new Blob(['\uFEFF'+html],{type:'application/msword;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const dateStr=TODAY.toISOString().slice(0,10);
+  const staffStr=staffFilter?`_${staffFilter}`:'';
+  a.download=`CS月別行動計画${staffStr}_${dateStr}.doc`;
+  a.click();
+}
+
+// init
+document.getElementById('tab-plan').style.display='none';
+</script>
+</body>
+</html>
